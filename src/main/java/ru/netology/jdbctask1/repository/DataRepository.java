@@ -2,7 +2,6 @@ package ru.netology.jdbctask1.repository;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -10,44 +9,46 @@ import javax.sql.DataSource;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.io.InputStream;
 
 @Repository
 public class DataRepository {
 
-    @Autowired
     private DataSource dataSource;
     @Autowired
-    private JdbcTemplate jdbcTemplate;
-    @Autowired
-    private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+    private NamedParameterJdbcTemplate template;
+    String sqlRequest;
 
     public DataRepository() {
-
+        sqlRequest = read("product_name.sql");
     }
 
-    public String getOrder(String name) throws SQLException {
-        var connection = dataSource.getConnection();
-        var statement = connection.createStatement();
+    public List<String> getOrders(String name) throws SQLException {
+        Map<String, Object> map = new HashMap<>();
+        map.put("name", name);
 
-//        ResultSet resultSet = statement.executeQuery("SELECT * FROM netology.Orders INNER JOIN netology.Customers\n" +
-//                "ON (netology.Orders.customer_id = netology.Customers.id)\n" +
-//                "WHERE lower(Customers.name)="+"'"+name+"'");
+        List<Orders> orders = template.query(sqlRequest, map, (rs, rowNum) -> new Orders(
+                rs.getInt(1),
+                rs.getString(2),
+                rs.getString(4),
+                rs.getInt(5)
+        ));
 
-        String sqlRequest = read("product_name.sql").replace("?", name);
-        ResultSet resultSet = statement.executeQuery(sqlRequest);
+        List<String> result = new ArrayList<>();
 
-        String result = "";
-
-        while(resultSet.next()) {
-            int id = resultSet.getInt(1);
-            String date = resultSet.getString(2);
-            String product = resultSet.getString(4);
-            System.out.println("Result : id : "+id+" date : "+date);
-            result = name +" "+id+" "+date+" "+product;
+        if (orders.size() > 0) {
+            result.add("Orders "+name+":");
+            for (Orders o : orders) {
+                result.add(o.toString());
+            }
+        } else {
+            result.add("Not found any order for " + name);
         }
 
         return result;
